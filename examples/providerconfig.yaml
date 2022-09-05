@@ -1,0 +1,16 @@
+apiVersion: jenkins.krateo.io/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: jenkins-providerconfig
+spec:
+  apiUrl: https://cloudbees.insiel.it
+  controller: ocp-master-01
+  username: kiratech009
+  verbose: true
+  insecure: true
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: default
+      name: jenkins-secret
+      key: password

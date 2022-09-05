@@ -1,0 +1,18 @@
+apiVersion: pkg.crossplane.io/v1alpha1
+kind: ControllerConfig
+metadata:
+  name: debug-config
+spec:
+  args:
+    - --debug
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-jenkins
+spec:
+  package: 'ghcr.io/krateoplatformops/provider-jenkins:VERSION'
+  packagePullPolicy: IfNotPresent
+  controllerConfigRef:
+    name: debug-config
+  

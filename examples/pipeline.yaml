@@ -1,0 +1,13 @@
+apiVersion: jenkins.krateo.io/v1alpha1
+kind: Pipeline
+metadata:
+  name: pipeline-example
+spec:
+  forProvider:
+    jobName: xxx
+    jobConfigRef:
+      name: xxx-job-config
+      namespace: default
+      key: app.xml
+  providerConfigRef:
+    name: jenkins-providerconfig
