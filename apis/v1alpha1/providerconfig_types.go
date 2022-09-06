@@ -17,6 +17,20 @@ type Credentials struct {
 
 // A ProviderConfigSpec defines the desired state of a ProviderConfig.
 type ProviderConfigSpec struct {
+	// BaseUrl is the Jenkins base URL.
+	BaseUrl string `json:"baseUrl"`
+
+	// Controller:.
+	// +optional
+	Controller *string `json:"controller,omitempty"`
+
+	// Username: Jenkins authentication user
+	// +optional
+	Username *string `json:"username,omitempty"`
+
+	// Credentials required to authenticate API server.
+	Credentials Credentials `json:"credentials"`
+
 	// Verbose is true dumps your client requests and responses.
 	// +optional
 	Verbose *bool `json:"verbose,omitempty"`

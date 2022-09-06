@@ -3,7 +3,7 @@ kind: ProviderConfig
 metadata:
   name: jenkins-providerconfig
 spec:
-  apiUrl: https://cloudbees.insiel.it
+  baseUrl: https://cloudbees.insiel.it
   controller: ocp-master-01
   username: kiratech009
   verbose: false
