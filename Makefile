@@ -66,7 +66,7 @@ install.provider: ## Install this provider
 
 .PHONY: provider.secret
 provider.secret: ## Create the example secrets
-	@$(KUBECTL) create secret generic concierge-secret --from-literal=token=$(CONCIERGE_SECRET) || true
+	@$(KUBECTL) create secret generic jenkins-secret --from-literal=apiToken=$(JENKINS_API_TOKEN) || true
 
 
 .PHONY: help

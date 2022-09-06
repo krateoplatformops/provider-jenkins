@@ -78,7 +78,7 @@ func createClient(t *testing.T) *Client {
 		baseUrl: os.Getenv("JENKINS_URL"),
 		auth: &Auth{
 			Username: os.Getenv("JENKINS_USERNAME"),
-			ApiToken: os.Getenv("JENKINS_PASSWORD"),
+			ApiToken: os.Getenv("JENKINS_API_TOKEN"),
 		},
 		httpClient: httphelper.ClientFromOpts(httphelper.ClientOpts{
 			Verbose:  true,
