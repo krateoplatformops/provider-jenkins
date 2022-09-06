@@ -4,6 +4,7 @@ metadata:
   name: pipeline-example
 spec:
   forProvider:
+    # uuidMarker: <-UUID->
     jobName: xxx
     jobConfigRef:
       name: xxx-job-config
