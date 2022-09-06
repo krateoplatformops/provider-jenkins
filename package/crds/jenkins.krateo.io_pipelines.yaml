@@ -87,6 +87,9 @@ spec:
                     description: 'JobName: the name you would like to give the new
                       job name.'
                     type: string
+                  uuidMarker:
+                    description: 'UUIDMarker:'
+                    type: string
                 required:
                 - jobConfigRef
                 - jobName
