@@ -18,6 +18,10 @@ type ValueSelector struct {
 }
 
 type PipelineParams struct {
+	// UUIDMarker:
+	// +optional
+	UUIDMarker *string `json:"uuidMarker,omitempty"`
+
 	// JobName: the name you would like to give the new job name.
 	JobName string `json:"jobName"`
 

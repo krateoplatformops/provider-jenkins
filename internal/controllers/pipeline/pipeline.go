@@ -148,6 +148,19 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, err
 	}
 
+	marker := helpers.StringValue(spec.UUIDMarker)
+	if len(marker) == 0 {
+		marker = "__UUID__"
+	}
+	data, err = fillWithUUID(data, marker)
+	if err != nil {
+		return managed.ExternalCreation{}, err
+	}
+
+	if err := e.updateJobConfig(ctx, spec, data); err != nil {
+		return managed.ExternalCreation{}, err
+	}
+
 	err = e.cli.CreateJob(ctx, spec.JobName, []byte(data))
 	if err != nil {
 		return managed.ExternalCreation{}, err
@@ -190,6 +203,20 @@ func (e *external) getJobConfig(ctx context.Context, spec *v1alpha1.PipelinePara
 	}
 
 	return res, err
+}
+
+func (e *external) updateJobConfig(ctx context.Context, spec *v1alpha1.PipelineParams, val string) error {
+	ref := helpers.ConfigMapKeySelector{
+		Name:      spec.JobConfigRef.Name,
+		Namespace: spec.JobConfigRef.Namespace,
+		Key:       spec.JobConfigRef.Key,
+	}
+	err := helpers.SetConfigMapValue(ctx, e.kube, ref, val)
+	if err == nil {
+		e.log.Debug("Desired configuration updated", "configMapRef", ref.String())
+	}
+
+	return err
 }
 
 func generateObservation(e *v1alpha1.PipelineParams) v1alpha1.PipelineObservation {

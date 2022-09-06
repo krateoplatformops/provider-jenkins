@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/crossplane/crossplane-runtime v0.17.0
 	github.com/crossplane/crossplane-tools v0.0.0-20220310165030-1f43fc12793e
+	github.com/google/uuid v1.1.2
 	github.com/lucasepe/dotenv v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
@@ -34,7 +35,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
