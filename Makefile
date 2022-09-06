@@ -23,12 +23,6 @@ SED=$(shell which sed)
 
 .DEFAULT_GOAL := help
 
-
-.PHONY: dev
-dev: generate ## run the controller in debug mode
-	$(KUBECTL) apply -f package/crds/ -R
-	go run cmd/main.go -d
-
 .PHONY: generate
 generate: tidy ## generate all CRDs
 	go generate ./...
@@ -64,10 +58,12 @@ install.crossplane: ## Install Crossplane into the local KinD cluster
 install.provider: ## Install this provider
 	@$(SED) 's/VERSION/$(VERSION)/g' ./examples/provider.yaml | $(KUBECTL) apply -f -
 
-.PHONY: provider.secret
-provider.secret: ## Create the example secrets
+.PHONY: dev
+dev: generate ## Run the provider in debug mode
 	@$(KUBECTL) create secret generic jenkins-secret --from-literal=apiToken=$(JENKINS_API_TOKEN) || true
-
+	@$(KUBECTL) create configmap xxx-job-config --from-file=app.xml=./testdata/config.xml || true
+	@$(KUBECTL) apply -f package/crds/ -R
+	go run cmd/main.go -d
 
 .PHONY: help
 help: ## print this help

@@ -2,12 +2,13 @@ package pipeline
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
-	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 
@@ -120,8 +121,14 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		}
 		return managed.ExternalObservation{}, err
 	}
-	e.log.Debug("Observed job configuration fetched", "name", meta.GetExternalName(cr))
 
+	inHash, err := computeSHA1(strings.TrimSpace(string(observed)))
+	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+	e.log.Debug("Observed job configuration", "name", meta.GetExternalName(cr), "hash", inHash)
+
+	fmt.Printf("\n\n%s\n\n", strings.TrimSpace(string(observed)))
 	spec := cr.Spec.ForProvider.DeepCopy()
 
 	desired, err := e.getJobConfig(ctx, spec)
@@ -129,7 +136,13 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, err
 	}
 
-	if !cmp.Equal(desired, string(observed)) {
+	outHash, err := computeSHA1(strings.TrimSpace(desired))
+	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+	e.log.Debug("Desired job configuration", "name", meta.GetExternalName(cr), "hash", outHash)
+
+	if outHash != inHash {
 		e.log.Debug("Configuration drift detected!")
 		return managed.ExternalObservation{
 			ResourceExists:   true,
@@ -209,4 +222,13 @@ func generateObservation(e *v1alpha1.PipelineParams) v1alpha1.PipelineObservatio
 	return v1alpha1.PipelineObservation{
 		JobName: helpers.StringPtr(e.JobName),
 	}
+}
+
+func computeSHA1(val string) (string, error) {
+	h := sha1.New()
+	_, err := h.Write([]byte(val))
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
