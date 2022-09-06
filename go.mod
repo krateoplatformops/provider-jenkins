@@ -5,7 +5,9 @@ go 1.18
 require (
 	github.com/crossplane/crossplane-runtime v0.17.0
 	github.com/crossplane/crossplane-tools v0.0.0-20220310165030-1f43fc12793e
+	github.com/lucasepe/dotenv v0.1.0
 	github.com/pkg/errors v0.9.1
+	github.com/stretchr/testify v1.7.0
 	k8s.io/api v0.23.0
 	k8s.io/apimachinery v0.23.0
 	sigs.k8s.io/controller-runtime v0.11.0
@@ -33,6 +35,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/afero v1.8.0 // indirect
 	github.com/spf13/cobra v1.2.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

@@ -1,0 +1,10 @@
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-jenkins
+  annotations:
+    meta.crossplane.io/description: "Krateo PlatformOps Jenkins provider"
+    friendly-name.meta.crossplane.io: "Krateo PlatformOps Jenkins Provider"
+spec:
+  controller:
+    image: ghcr.io/krateoplatformops/provider-jenkins-controller:VERSION

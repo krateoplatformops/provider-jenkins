@@ -6,11 +6,11 @@ spec:
   apiUrl: https://cloudbees.insiel.it
   controller: ocp-master-01
   username: kiratech009
-  verbose: true
+  verbose: false
   insecure: true
   credentials:
     source: Secret
     secretRef:
       namespace: default
       name: jenkins-secret
-      key: password
+      key: apiToken
