@@ -110,7 +110,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		}, nil
 	}
 
-	observed, err := e.cli.GetJobConfig(ctx, parts[1])
+	_, err := e.cli.GetJobConfig(ctx, parts[1])
 	if err != nil {
 		var notFound *jenkins.HTTPStatusError
 		if errors.As(err, &notFound) {
@@ -122,33 +122,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, err
 	}
 
-	inHash, err := computeSHA1(strings.TrimSpace(string(observed)))
-	if err != nil {
-		return managed.ExternalObservation{}, err
-	}
-	e.log.Debug("Observed job configuration", "name", meta.GetExternalName(cr), "hash", inHash)
-
-	fmt.Printf("\n\n%s\n\n", strings.TrimSpace(string(observed)))
 	spec := cr.Spec.ForProvider.DeepCopy()
-
-	desired, err := e.getJobConfig(ctx, spec)
-	if err != nil {
-		return managed.ExternalObservation{}, err
-	}
-
-	outHash, err := computeSHA1(strings.TrimSpace(desired))
-	if err != nil {
-		return managed.ExternalObservation{}, err
-	}
-	e.log.Debug("Desired job configuration", "name", meta.GetExternalName(cr), "hash", outHash)
-
-	if outHash != inHash {
-		e.log.Debug("Configuration drift detected!")
-		return managed.ExternalObservation{
-			ResourceExists:   true,
-			ResourceUpToDate: false,
-		}, nil
-	}
 
 	cr.Status.AtProvider = generateObservation(spec)
 	cr.Status.SetConditions(xpv1.Available())
