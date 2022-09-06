@@ -41,7 +41,7 @@ type Client struct {
 	crumbData  map[string]string
 }
 
-func NewClient(opts ClientOpts) *Client {
+func NewClient(opts *ClientOpts) *Client {
 	return &Client{
 		baseUrl:    opts.BaseUrl,
 		controller: opts.Controller,
