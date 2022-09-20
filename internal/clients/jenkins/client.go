@@ -63,10 +63,6 @@ func (c *Client) GetJobConfig(ctx context.Context, name string) ([]byte, error) 
 		return nil, err
 	}
 
-	//if err := c.setCrumbsEventually(req); err != nil {
-	//	return nil, err
-	//}
-
 	rsp, err := c.doRequest(req)
 	if err != nil {
 		return nil, err
@@ -97,9 +93,6 @@ func (c *Client) CreateJob(ctx context.Context, name string, data []byte) error 
 	}
 
 	req.Header.Set("Content-Type", "application/xml")
-	//if err := c.setCrumbsEventually(req); err != nil {
-	//	return err
-	//}
 
 	_, err = c.doRequest(req)
 	return err

@@ -1,9 +1,7 @@
-package pipeline
+package folderrolebinding
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -23,29 +21,32 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 
-	v1alpha1 "github.com/krateoplatformops/provider-jenkins/apis/pipeline/v1alpha1"
+	v1alpha1 "github.com/krateoplatformops/provider-jenkins/apis/folderrolebinding/v1alpha1"
 
 	"github.com/krateoplatformops/provider-jenkins/internal/clients/jenkins"
 	"github.com/krateoplatformops/provider-jenkins/internal/helpers"
 )
 
 const (
-	errInvalidCRD = "managed resource is not an Pipeline custom resource"
+	errInvalidCRD = "managed resource is not an FolderRoleBinding custom resource"
+
+	externalNameFmt = "folderrolebinding/%s/%s"
 
 	reasonCannotCreate = "CannotCreateExternalResource"
 	reasonCreated      = "CreatedExternalResource"
 	reasonDeleted      = "DeletedExternalResource"
+	reasonCannotDelete = "CannotDeleteExternalResource"
 )
 
 func Setup(mgr ctrl.Manager, o controller.Options) error {
-	name := managed.ControllerName(v1alpha1.PipelineGroupKind)
+	name := managed.ControllerName(v1alpha1.FolderRoleBindingGroupKind)
 
 	log := o.Logger.WithValues("controller", name)
 
 	recorder := mgr.GetEventRecorderFor(name)
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(v1alpha1.PipelineGroupVersionKind),
+		resource.ManagedKind(v1alpha1.FolderRoleBindingGroupVersionKind),
 		managed.WithExternalConnecter(&connector{
 			kube:     mgr.GetClient(),
 			log:      log,
@@ -58,7 +59,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		WithOptions(o.ForControllerRuntime()).
-		For(&v1alpha1.Pipeline{}).
+		For(&v1alpha1.FolderRoleBinding{}).
 		Complete(ratelimiter.NewReconciler(name, r, o.GlobalRateLimiter))
 }
 
@@ -70,7 +71,7 @@ type connector struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*v1alpha1.Pipeline)
+	cr, ok := mg.(*v1alpha1.FolderRoleBinding)
 	if !ok {
 		return nil, errors.New(errInvalidCRD)
 	}
@@ -97,31 +98,33 @@ type external struct {
 }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
-	cr, ok := mg.(*v1alpha1.Pipeline)
+	cr, ok := mg.(*v1alpha1.FolderRoleBinding)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errInvalidCRD)
 	}
 
 	parts := strings.Split(meta.GetExternalName(cr), "/")
-	if len(parts) < 2 {
+	if len(parts) < 3 {
 		return managed.ExternalObservation{
 			ResourceExists:   false,
 			ResourceUpToDate: true,
 		}, nil
 	}
 
-	_, err := e.cli.GetJobConfig(ctx, parts[1])
-	if err != nil {
-		var notFound *jenkins.HTTPStatusError
-		if errors.As(err, &notFound) {
-			return managed.ExternalObservation{
-				ResourceExists:   false,
-				ResourceUpToDate: true,
-			}, nil
+	// TODO: we don't have any API ref to check if resource exists
+	/*
+		_, err := e.cli.GetJobConfig(ctx, parts[1])
+		if err != nil {
+			var notFound *jenkins.HTTPStatusError
+			if errors.As(err, &notFound) {
+				return managed.ExternalObservation{
+					ResourceExists:   false,
+					ResourceUpToDate: true,
+				}, nil
+			}
+			return managed.ExternalObservation{}, err
 		}
-		return managed.ExternalObservation{}, err
-	}
-
+	*/
 	spec := cr.Spec.ForProvider.DeepCopy()
 
 	cr.Status.AtProvider = generateObservation(spec)
@@ -134,7 +137,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
-	cr, ok := mg.(*v1alpha1.Pipeline)
+	cr, ok := mg.(*v1alpha1.FolderRoleBinding)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errInvalidCRD)
 	}
@@ -143,33 +146,31 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	spec := cr.Spec.ForProvider.DeepCopy()
 
-	data, err := e.getJobConfig(ctx, spec)
+	sid := strings.TrimSpace(spec.SID)
+	if len(sid) == 0 {
+		err := fmt.Errorf("SID not specified in FolderRole (name: %s)", spec.Name)
+		e.log.Debug("SID not specified in FolderRole", "name", spec.Name)
+		e.rec.Eventf(cr, corev1.EventTypeNormal, "MissingSID", err.Error())
+		return managed.ExternalCreation{}, err
+	}
+
+	err := e.cli.AddFolderRole(ctx, jenkins.AddFolderRoleOpts{
+		Name:        spec.Name,
+		Permissions: spec.Permissions,
+		FolderNames: spec.FolderNames,
+	})
+	if err != nil {
+		e.log.Info("FolderRole NOT created", "name", spec.Name, "error", err.Error())
+		e.rec.Eventf(cr, corev1.EventTypeWarning, reasonCannotCreate, "FolderRole NOT created (name: %s, error: %s)", spec.Name, err.Error())
+		return managed.ExternalCreation{}, err
+	}
+
+	err = e.cli.AssignSidToFolderRole(ctx, spec.SID, spec.Name)
 	if err != nil {
 		return managed.ExternalCreation{}, err
 	}
 
-	marker := helpers.StringValue(spec.UUIDMarker)
-	if len(marker) == 0 {
-		marker = "__UUID__"
-	}
-	data, err = fillWithUUID(data, marker)
-	if err != nil {
-		return managed.ExternalCreation{}, err
-	}
-
-	if err := e.updateJobConfig(ctx, spec, data); err != nil {
-		return managed.ExternalCreation{}, err
-	}
-
-	err = e.cli.CreateJob(ctx, spec.JobName, []byte(data))
-	if err != nil {
-		return managed.ExternalCreation{}, err
-	}
-	e.log.Debug("Job created", "name", spec.JobName)
-	e.rec.Eventf(cr, corev1.EventTypeNormal, reasonCreated, "Job created (name: %s)", spec.JobName)
-
-	meta.SetExternalName(cr, fmt.Sprintf("jenkins/%s", spec.JobName))
-
+	meta.SetExternalName(cr, fmt.Sprintf(externalNameFmt, spec.Name, spec.SID))
 	return managed.ExternalCreation{}, nil
 }
 
@@ -179,7 +180,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
-	cr, ok := mg.(*v1alpha1.Pipeline)
+	cr, ok := mg.(*v1alpha1.FolderRoleBinding)
 	if !ok {
 		return errors.New(errInvalidCRD)
 	}
@@ -188,48 +189,18 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
 
 	spec := cr.Spec.ForProvider.DeepCopy()
 
-	return e.cli.DeleteJob(ctx, spec.JobName)
-}
-
-func (e *external) getJobConfig(ctx context.Context, spec *v1alpha1.PipelineParams) (string, error) {
-	ref := helpers.ConfigMapKeySelector{
-		Name:      spec.JobConfigRef.Name,
-		Namespace: spec.JobConfigRef.Namespace,
-		Key:       spec.JobConfigRef.Key,
-	}
-	res, err := helpers.GetConfigMapValue(ctx, e.kube, ref)
-	if err == nil {
-		e.log.Debug("Desired configuration retrieved", "configMapRef", ref.String())
-	}
-
-	return res, err
-}
-
-func (e *external) updateJobConfig(ctx context.Context, spec *v1alpha1.PipelineParams, val string) error {
-	ref := helpers.ConfigMapKeySelector{
-		Name:      spec.JobConfigRef.Name,
-		Namespace: spec.JobConfigRef.Namespace,
-		Key:       spec.JobConfigRef.Key,
-	}
-	err := helpers.SetConfigMapValue(ctx, e.kube, ref, val)
-	if err == nil {
-		e.log.Debug("Desired configuration updated", "configMapRef", ref.String())
-	}
-
-	return err
-}
-
-func generateObservation(e *v1alpha1.PipelineParams) v1alpha1.PipelineObservation {
-	return v1alpha1.PipelineObservation{
-		JobName: helpers.StringPtr(e.JobName),
-	}
-}
-
-func computeSHA1(val string) (string, error) {
-	h := sha1.New()
-	_, err := h.Write([]byte(val))
+	err := e.cli.DeleteFolderRole(ctx, spec.Name)
 	if err != nil {
-		return "", err
+		e.log.Info("Error deleting FolderRole", "name", spec.Name, "error", err.Error())
+		//e.rec.Eventf(cr, corev1.EventTypeWarning, reasonCannotDelete, "Error deleting FolderRole (name: %s, error: %s)", spec.Name, err.Error())
 	}
-	return hex.EncodeToString(h.Sum(nil)), nil
+
+	return nil
+}
+
+func generateObservation(e *v1alpha1.FolderRoleBindingParams) v1alpha1.FolderRoleBindingObservation {
+	return v1alpha1.FolderRoleBindingObservation{
+		Name: helpers.StringPtr(e.Name),
+		SID:  helpers.StringPtr(e.SID),
+	}
 }

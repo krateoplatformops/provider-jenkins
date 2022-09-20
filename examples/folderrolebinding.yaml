@@ -1,0 +1,14 @@
+apiVersion: jenkins.krateo.io/v1alpha1
+kind: FolderRoleBinding
+metadata:
+  name: folderrolebinding-example
+spec:
+  forProvider:
+    sid: tujxptest02
+    name: jxp-tujxptest02
+    permissions:
+      - hudson.model.Item.Read
+    folderNames:
+      - JXP
+  providerConfigRef:
+    name: jenkins-providerconfig

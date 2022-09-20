@@ -3,6 +3,7 @@ package apis
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
+	folderrolebindingv1alpha1 "github.com/krateoplatformops/provider-jenkins/apis/folderrolebinding/v1alpha1"
 	pipelinev1alpha1 "github.com/krateoplatformops/provider-jenkins/apis/pipeline/v1alpha1"
 	v1alpha1 "github.com/krateoplatformops/provider-jenkins/apis/v1alpha1"
 )
@@ -12,6 +13,7 @@ func init() {
 	AddToSchemes = append(AddToSchemes,
 		v1alpha1.SchemeBuilder.AddToScheme,
 		pipelinev1alpha1.SchemeBuilder.AddToScheme,
+		folderrolebindingv1alpha1.SchemeBuilder.AddToScheme,
 	)
 }
 

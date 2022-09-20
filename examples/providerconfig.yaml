@@ -6,7 +6,7 @@ spec:
   baseUrl: https://jenkins.pipem.io
   #controller: ocp-master-01
   username: Admin
-  verbose: false
+  verbose: true
   insecure: true
   credentials:
     source: Secret
